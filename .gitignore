@@ -3,7 +3,7 @@ Thumbs.db
 ehthumbs.db
 
 # Folder config file
-Desktop.ini
+Desktop.init
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
@@ -41,3 +41,10 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+
+# Eclipse Files
+.metadata/
+CDP_HW1/bin/
+
+
