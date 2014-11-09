@@ -130,7 +130,7 @@ public class SectionController implements Runnable {
 							neighborOwner.wait();
 						} catch (InterruptedException e) {
 							System.out.println("panic!!!"); // TODO - throw an
-															// exception!
+															// exception!!!
 						}
 					}
 					counter += (input[i][j] ? 1 : 0);
