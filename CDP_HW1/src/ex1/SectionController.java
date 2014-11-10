@@ -13,7 +13,7 @@ public class SectionController implements Runnable {
 	private Integer input_gen;
 	private Integer result_gen;
 	public int target_gen;
-	boolean[][] input;
+	public static boolean[][] input;
 	boolean[][] result; // it's initialized as [cols][rows]
 	public int starting_row;
 	public int starting_col;
@@ -21,12 +21,11 @@ public class SectionController implements Runnable {
 	public int num_of_cols;
 	public static ArrayList<SectionController> neighbours; //includes yourself
 
-	public SectionController(boolean[][] input, int starting_row,
+	public SectionController(int starting_row,
 			int starting_col, int num_of_rows, int num_of_cols, int target_gen) {
 		input_gen = 0;
 		result_gen = 0;
 		this.target_gen = target_gen;
-		this.input = input;
 		this.starting_col = starting_col;
 		this.starting_row = starting_row;
 		this.num_of_cols = num_of_cols;
@@ -85,26 +84,22 @@ public class SectionController implements Runnable {
 	}
 
 	public int getInputGen() {
-		synchronized (input_gen) {
 			return input_gen;
-		}
 	}
 
 	public int getResGen() {
-		synchronized (result_gen) {
 			return result_gen;
-		}
 	}
 
 	private void increaseInputGen() {
-		synchronized (input_gen) {
+		synchronized (this) {
 			input_gen++;
 			notifyAll();
 		}
 	}
 
 	private void increaseResGen() {
-		synchronized (result_gen) {
+		synchronized (this) {
 			result_gen++;
 			notifyAll();
 		}
