@@ -84,26 +84,22 @@ public class SectionController implements Runnable {
 	}
 
 	public int getInputGen() {
-		synchronized (input_gen) {
 			return input_gen;
-		}
 	}
 
 	public int getResGen() {
-		synchronized (result_gen) {
 			return result_gen;
-		}
 	}
 
 	private void increaseInputGen() {
-		synchronized (input_gen) {
+		synchronized (this) {
 			input_gen++;
 			notifyAll();
 		}
 	}
 
 	private void increaseResGen() {
-		synchronized (result_gen) {
+		synchronized (this) {
 			result_gen++;
 			notifyAll();
 		}
