@@ -24,14 +24,14 @@ public class ParallelGameOfLife implements GameOfLife {
 		int start_row=0;
 		int num_col=0;
 		int num_row=0;
-		for (int i = 0; i <= initalField.length/vSplit; i++) {
+		for (int i = 0; i <= vSplit; i++) {
 			start_col=i*vSplit;
 			// num_col is min(vsplit,largest number that fit in the remaining array)
-			num_col = i==initalField.length/vSplit ? initalField.length-start_col:vSplit;
-			for (int j = 0; j < initalField[0].length/hSplit; j++) {
+			num_col = i==initalField.length/vSplit ? initalField.length-start_col:initalField.length/vSplit;
+			for (int j = 0; j < hSplit; j++) {
 				start_row=j*hSplit;
 				//num_row is min(hsplit,largest number that fit in the remaining array)
-				num_row= j==initalField[0].length/hSplit ? initalField[0].length-start_row : hSplit;
+				num_row= j==initalField[0].length/hSplit ? initalField[0].length-start_row : initalField[0].length/hSplit;
 				SectionController tmp=new SectionController( start_row, start_col,
 						num_row, num_col, generations);
 				section_Controllers.add(tmp);

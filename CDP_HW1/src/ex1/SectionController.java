@@ -138,6 +138,8 @@ public class SectionController implements Runnable {
 	private void nextGen() {
 		for (int i = starting_col; i < starting_col + num_of_cols; i++) {
 			for (int j = starting_row; j < starting_row + num_of_rows; j++) {
+				if (result==null)
+					throw (new NullPointerException("this is my throw_____________________"));
 				int numNeighbors = numNeighbors(i, j);
 				result[i - starting_col][j - starting_row] = false;
 				if (numNeighbors == 3 || (input[i][j] && numNeighbors == 2)) {
