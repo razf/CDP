@@ -24,19 +24,22 @@ public class ParallelGameOfLife implements GameOfLife {
 		int start_row=0;
 		int num_col=0;
 		int num_row=0;
+		double remaining_col=initalField.length;
+		double remaining_row=initalField[0].length;
 		for (int i = 0; i <= vSplit; i++) {
-			start_col=i*vSplit;
-			// num_col is min(vsplit,largest number that fit in the remaining array)
-			num_col = i==initalField.length/vSplit ? initalField.length-start_col:initalField.length/vSplit;
-			for (int j = 0; j < hSplit; j++) {
-				start_row=j*hSplit;
-				//num_row is min(hsplit,largest number that fit in the remaining array)
-				num_row= j==initalField[0].length/hSplit ? initalField[0].length-start_row : initalField[0].length/hSplit;
+			start_col=(int)(initalField.length-remaining_col);
+			num_col = (int)(Math.ceil(remaining_col)/(vSplit+1-i));
+			for (int j = 0; j <= hSplit; j++) {
+				start_row=(int)(initalField[0].length-remaining_row);
+				num_row= (int)(Math.ceil(remaining_row)/(hSplit+1-j));
 				SectionController tmp=new SectionController( start_row, start_col,
 						num_row, num_col, generations);
 				section_Controllers.add(tmp);
 				threads.add(new Thread(tmp));
+				remaining_row-=num_row;
 			}
+			remaining_col-=num_col;
+			remaining_row=initalField[0].length;
 		}
 	}
 	private boolean [][]invoke_aux(boolean[][] initalField, int hSplit, int vSplit,
@@ -44,7 +47,7 @@ public class ParallelGameOfLife implements GameOfLife {
 		
 		ArrayList<SectionController> section_Controllers=new ArrayList<SectionController>();
 		ArrayList<Thread> threads=new ArrayList<Thread>();
-		SectionController.input=initalField;
+		SectionController.input=initalField.clone();
 		assign_threads(initalField, hSplit, vSplit, generations, section_Controllers, threads);
 		SectionController.neighbours=section_Controllers;
 		for (Thread thread : threads) {

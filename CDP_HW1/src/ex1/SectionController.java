@@ -10,6 +10,22 @@ import java.util.ArrayList;
  * 
  */
 public class SectionController implements Runnable {
+	public class EndOfFunction extends RuntimeException{
+		public EndOfFunction(String message) {
+			super(message);
+		}
+		// eclipse suggested to put this variable here 
+		private static final long serialVersionUID = 1L;
+	}
+	public class SynchronizationFailed extends RuntimeException{
+		public SynchronizationFailed(String message) {
+			super(message);
+		}
+		// eclipse suggested to put this variable here 
+		private static final long serialVersionUID = 1L;
+	}
+	
+	
 	private Integer input_gen;
 	private Integer result_gen;
 	public int target_gen;
@@ -40,6 +56,12 @@ public class SectionController implements Runnable {
 
 	@Override
 	public void run() {
+		result = new boolean[num_of_cols][num_of_rows];
+		for (int i = 0; i < num_of_cols; i++) {
+			for (int j = 0; j < num_of_rows; j++) {
+				result[i][j] = false;
+			}
+		}
 		while(input_gen < target_gen) {
 			nextGen();
 			increaseResGen();
@@ -49,8 +71,7 @@ public class SectionController implements Runnable {
 						try {
 							t.wait();
 						} catch (InterruptedException e) {
-							System.out.println("InterruptedException while waiting for res_gen to update"); // TODO - throw an
-							// exception!
+							throw new SynchronizationFailed("InterruptedException while waiting for res_gen to update");
 						}
 					}
 				}
@@ -78,9 +99,7 @@ public class SectionController implements Runnable {
 				return t;
 			}
 		}
-		return null; // should not reach here. should throw an exception, but
-						// we're lazy for now.
-		// TODO throw an exception?
+		throw new EndOfFunction("convertPointToThread didnt find the point a thread owner");
 	}
 
 	public int getInputGen() {
@@ -124,8 +143,7 @@ public class SectionController implements Runnable {
 						try {
 							neighborOwner.wait();
 						} catch (InterruptedException e) {
-							System.out.println("panic!"); // TODO - throw an
-															// exception!!!
+							throw new SynchronizationFailed("InterruptedException while waiting for Input_gen to update");
 						}
 					}
 					counter += (input[i][j] ? 1 : 0);
@@ -138,8 +156,6 @@ public class SectionController implements Runnable {
 	private void nextGen() {
 		for (int i = starting_col; i < starting_col + num_of_cols; i++) {
 			for (int j = starting_row; j < starting_row + num_of_rows; j++) {
-				if (result==null)
-					throw (new NullPointerException("this is my throw_____________________"));
 				int numNeighbors = numNeighbors(i, j);
 				result[i - starting_col][j - starting_row] = false;
 				if (numNeighbors == 3 || (input[i][j] && numNeighbors == 2)) {
