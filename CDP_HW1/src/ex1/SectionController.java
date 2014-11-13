@@ -10,35 +10,63 @@ import java.util.ArrayList;
  * 
  */
 public class SectionController implements Runnable {
-	public class EndOfFunction extends RuntimeException{
+	public class EndOfFunction extends RuntimeException {
 		public EndOfFunction(String message) {
 			super(message);
 		}
-		// eclipse suggested to put this variable here 
+
+		// eclipse suggested to put this variable here
 		private static final long serialVersionUID = 1L;
 	}
-	public class SynchronizationFailed extends RuntimeException{
+
+	public class SynchronizationFailed extends RuntimeException {
 		public SynchronizationFailed(String message) {
 			super(message);
 		}
-		// eclipse suggested to put this variable here 
+
+		// eclipse suggested to put this variable here
 		private static final long serialVersionUID = 1L;
 	}
-	
-	
+
+	public class Tile {
+		public int generation;
+		public boolean curr_gen_data;
+		public boolean prev_gen_data;
+
+		public Tile(int gen, boolean prev_gen_data, boolean curr_gen_data) {
+			generation = gen;
+			this.curr_gen_data = curr_gen_data;
+			this.prev_gen_data = prev_gen_data;
+		}
+
+		public synchronized boolean GetData(int gen) {
+			if (gen == generation) {
+				return curr_gen_data;
+			} else if (gen == generation - 1) {
+				return prev_gen_data;
+			} else {
+				System.out.println("panic!!!");// TODO throw an exception
+				return false;// shouldn't reach this
+			}
+		}
+	}
+
 	private Integer input_gen;
 	private Integer result_gen;
 	public int target_gen;
-	public static boolean[][] input;
-	boolean[][] result; // it's initialized as [cols][rows]
+	Tile[][] result; // it's initialized as [cols][rows]
 	public int starting_row;
 	public int starting_col;
 	public int num_of_rows;
 	public int num_of_cols;
-	public static ArrayList<SectionController> neighbours; //includes yourself
-
-	public SectionController(int starting_row,
-			int starting_col, int num_of_rows, int num_of_cols, int target_gen) {
+	public boolean changed;// if current iteration changed generation
+	public boolean done;// all tiles are in the target generation.
+	public ArrayList<SectionController> neighbours; // includes yourself
+	//FIXME add a static board
+	
+	
+	public SectionController(int starting_row, int starting_col,
+			int num_of_rows, int num_of_cols, int target_gen, boolean[][] input) {
 		input_gen = 0;
 		result_gen = 0;
 		this.target_gen = target_gen;
@@ -46,47 +74,72 @@ public class SectionController implements Runnable {
 		this.starting_row = starting_row;
 		this.num_of_cols = num_of_cols;
 		this.num_of_rows = num_of_rows;
-		boolean[][] result = new boolean[num_of_cols][num_of_rows];
+		this.result = new Tile[num_of_cols][num_of_rows];
 		for (int i = 0; i < num_of_cols; i++) {
 			for (int j = 0; j < num_of_rows; j++) {
-				result[i][j] = false;
+				// we initialize the tiles so the prev gen is -1 (meaningless),
+				// and the current gen is 0.
+				result[i][j] = new Tile(0, false, input[i + starting_col][j
+						+ starting_row]);
 			}
 		}
+		changed = false;
+		done = (target_gen == 0);// finish immediately if the target generation
+									// is 0.
 	}
 
 	@Override
 	public void run() {
-		result = new boolean[num_of_cols][num_of_rows];
-		for (int i = 0; i < num_of_cols; i++) {
-			for (int j = 0; j < num_of_rows; j++) {
-				result[i][j] = false;
-			}
-		}
-		while(input_gen < target_gen) {
-			nextGen();
-			increaseResGen();
-			for (SectionController t : neighbours) {
-				synchronized(t) {
-					while(t.getResGen() != result_gen) {
-						try {
-							t.wait();
+		while (!done) {
+			done = true; // it will be made false in the next iteration if not
+							// done.
+			changed = false;// it will be made true if any tile advanced a
+							// generation.
+			// iterate on the section
+			for (int i = 0; i < num_of_cols; i++) {
+				for (int j = 0; j < num_of_rows; j++) {
+					if (result[i][j].generation < target_gen) {
+						done = false;
+						int adj = numNeighbors(i, j);
+						if (adj >= 0) {// adj will be negative if can't be
+										// calculated
+							synchronized (result[i][j]) {
+								result[i][j].prev_gen_data = result[i][j].curr_gen_data;
+								// calculate the current generation of this tile
+								result[i][j].curr_gen_data = false;
+								if (adj == 3
+										|| (result[i][j].prev_gen_data && adj == 2)) {
+									result[i][j].curr_gen_data = true;
+								}
+								// update generation and changed.
+								result[i][j].generation += 1;
+							}
+							changed = true;
+							if (i == 0 || i == num_of_cols - 1 || j == 0
+									|| j == num_of_rows - 1) {
+								// TODO notifyAllRelatedNeighbors(i,j); (all
+								// neighbors related to this)
+							}
+						}
+					}
+				}
+				// if we can't calculate any of our tiles
+				if (!changed) {
+					synchronized (this) {
+						try{
+							this.wait();
 						} catch (InterruptedException e) {
-							throw new SynchronizationFailed("InterruptedException while waiting for res_gen to update");
+							//FIXME
 						}
 					}
 				}
 			}
-			for (int i = 0; i < num_of_cols; i++) {
-				for (int j = 0; j < num_of_rows; j++) {
-					input[starting_col+i][starting_row+j] = result[i][j];
-				}
-			}
-			increaseInputGen();
 		}
-		// TODO Auto-generated method stub
-
+		//TODO - write last generation and the one before it to the global input matrix.
 	}
-
+	
+	//returns null if index out of bounds.
+	//TODO
 	private SectionController convertPointToThread(int col, int row) {
 		// check if out of bounds
 		if (col > input.length || row > input[0].length) {
@@ -99,70 +152,38 @@ public class SectionController implements Runnable {
 				return t;
 			}
 		}
-		throw new EndOfFunction("convertPointToThread didnt find the point a thread owner");
-	}
-
-	public int getInputGen() {
-			return input_gen;
-	}
-
-	public int getResGen() {
-			return result_gen;
-	}
-
-	private void increaseInputGen() {
-		synchronized (this) {
-			input_gen++;
-			notifyAll();
-		}
-	}
-
-	private void increaseResGen() {
-		synchronized (this) {
-			result_gen++;
-			notifyAll();
-		}
+		throw new EndOfFunction(
+				"convertPointToThread didnt find the point a thread owner");
 	}
 
 	private int numNeighbors(int col, int row) {
-		int counter = (input[col][row] ? -1 : 0);
+		int counter = (result[col][row].prev_gen_data ? -1 : 0);
+		
 		for (int i = col - 1; i <= col + 1; i++) {
-			if (i < 0 || i >= input.length) {
-				continue;
-			}
 			for (int j = row - 1; j <= row + 1; j++) {
-				if (j < 0 || j >= input[0].length) {
-					continue;
+				// need to check what section controller owns the square. null if it's outside the board limits.
+				SectionController neighborOwner = convertPointToThread(i+starting_col, j+starting_row);//convert by index on the board
+				if(neighborOwner == null) {
+					continue; // always false.
 				}
-				// need to check what section controller owns the square
-				SectionController neighborOwner = convertPointToThread(i, j);
-				synchronized (neighborOwner) {
-					// if the square is not in the current gen, we can't work on
-					// it. wait until the other thread is done.
-					while (neighborOwner.getInputGen() != input_gen) {
-						try {
-							neighborOwner.wait();
-						} catch (InterruptedException e) {
-							throw new SynchronizationFailed("InterruptedException while waiting for Input_gen to update");
-						}
+				try {
+					if(neighborOwner.getTileData(i,j,result[i][j].generation-1)) {
+						counter++;
 					}
-					counter += (input[i][j] ? 1 : 0);
+				} catch (Exception e) {
+					//FIXME, also create an exception
 				}
 			}
 		}
 		return counter;
 	}
 
-	private void nextGen() {
-		for (int i = starting_col; i < starting_col + num_of_cols; i++) {
-			for (int j = starting_row; j < starting_row + num_of_rows; j++) {
-				int numNeighbors = numNeighbors(i, j);
-				result[i - starting_col][j - starting_row] = false;
-				if (numNeighbors == 3 || (input[i][j] && numNeighbors == 2)) {
-					result[i - starting_col][j - starting_row] = true;
-				}
-			}
-		}
+	private boolean getTileData(int col, int row, int generation) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
+	public void notifyAllRelatedNeighbors(int col, int row) {
+		// TODO 
+	}
 }
