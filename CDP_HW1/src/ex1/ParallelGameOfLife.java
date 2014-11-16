@@ -77,14 +77,14 @@ public class ParallelGameOfLife implements GameOfLife {
 				throw (new SectionController.SynchronizationFailed("master thread can't join"));
 			}
 		}
-		try {
+		/*try {
 			Ex1.printArray(SectionController.input[0], "P_output.txt");
 			Ex1.printArray(SectionController.input[1], "P_output1.txt");
 		} catch (Exception e) {
 			System.err.println("Failed to write the output to file");
 			e.printStackTrace();
 			System.exit(-1);
-		}
+		}*/
 		return SectionController.input.clone();
 	}
 }

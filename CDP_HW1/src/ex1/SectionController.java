@@ -120,8 +120,9 @@ public class SectionController implements Runnable {
 							// done.
 			changed = false;// it will be made true if any tile advanced a
 							// generation.
+			//neighbours that we changed a tile near their border 
 			ArrayList<SectionController> notifyedNeighbors = new ArrayList<SectionController>();
-			// iterate on the section
+			// iterate on the section and calculate each tile (if possible)
 			for (int i = 0; i < num_of_cols; i++) {
 				for (int j = 0; j < num_of_rows; j++) {
 					if (result[i][j].generation < target_gen) {
