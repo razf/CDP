@@ -2,9 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <omp.h>
+//must use an integer variable as input=
+#define NumberOfSetBits(i)   ({ i = i - ((i >> 1) & 0x55555555);\
+     i = (i & 0x33333333) + ((i >> 2) & 0x33333333);\
+     (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;})
 
-
-int NumberOfSetBits(int i)
+#define  GetHadamarTile(row,col) ({int Macro_tmp = row&col;\
+	Macro_tmp = NumberOfSetBits(Macro_tmp) & 1;\
+	 (1-2*Macro_tmp);})
+	// Macro_tmp?-1:1______i checked and the mult is faster then branch
+/*int NumberOfSetBits(int i)
 {
      i = i - ((i >> 1) & 0x55555555);
      i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
@@ -14,8 +21,9 @@ int NumberOfSetBits(int i)
 int GetHadamarTile(int row,int col){
 	int tmp = row&col;
 	tmp = NumberOfSetBits(tmp) & 1; //check if number of bits is even
+	//return tmp?1:-1;
 	return 1-2*tmp;
-}
+}*/
 
 void fast_parallel_walsh(int* vector, int size)
 {
@@ -28,10 +36,8 @@ void simple_parallel_walsh(int* vector, int size)
 		printf("Failed to allocate memory for input!");
 		exit(-1);
 	}
-	if(!memcpy(input, vector, sizeof(int) * size)) {
-		printf("Failed to copy memory!");
-		exit(-1);
-	}
+	memcpy(input, vector, sizeof(int) * size);//i checked and memcpy cant change the destination address to null or anything 
+	
 	
 	#pragma omp parallel
 	{
@@ -45,4 +51,5 @@ void simple_parallel_walsh(int* vector, int size)
 			sum = 0;
 		}
 	}
+	free(input);
 }
