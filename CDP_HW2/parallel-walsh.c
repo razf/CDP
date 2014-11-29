@@ -165,7 +165,7 @@ void FWHT (int* vector,int size)
 		else {
 			for (register int j = 0; j < (1 << log2); j += 1 << (i+1))
 			{
-					#pragma omp parallel for schedule(static, 256<<FIVE(i))
+					#pragma omp parallel for schedule(static, 256<<FIVE(i-11))
 					inside_Loop;
 			}
 		}
