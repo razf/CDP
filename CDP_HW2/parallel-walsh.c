@@ -144,10 +144,10 @@ void FWHT (int* vector,int size)
   const register int log2 = l2(size) - 1;
   // #pragma omp parallel
   // {
-  	
+  	register int num_thread_log=l2(omp_get_num_threads());
 	for (register int i = 0; i < log2; ++i)
 	{
-		if(i<11) {
+		if(i < 11) {
 		#pragma omp parallel for schedule(static, 32768>>FIVE(i))
 	    for (register int j = 0; j < (1 << log2); j += 1 << (i+1))
 	    {
@@ -165,7 +165,7 @@ void FWHT (int* vector,int size)
 		else {
 			for (register int j = 0; j < (1 << log2); j += 1 << (i+1))
 			{
-					#pragma omp parallel for schedule(static, 256<<FIVE(i-11))
+					#pragma omp parallel for schedule(static, 256<<FIVE(i))
 					inside_Loop;
 			}
 		}
