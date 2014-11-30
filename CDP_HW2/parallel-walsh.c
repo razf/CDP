@@ -32,7 +32,33 @@ int l2 (register int x)
 				*b = Macro_tmp - *b;\
 			   }
 
-
+void FWHT (register int* const vector,const register int size)
+ {
+   const int log2 = l2 (size) - 1;
+   register int tmp;
+   const register int max_j=1<<log2;
+   register int max_k;
+   register int* a;
+   register int* b;
+   register int i;
+   register int j;
+   register int k;
+   for (i = 0; i < log2; ++i)
+   {
+	max_k=(1<<i);
+     for (j = 0; j < max_j; j += 1 << (i+1))
+     {
+        for (k = 0; k < max_k; ++k)
+        {
+			a = vector + j + k;
+			b = a + max_k;
+			tmp=*a;
+			*a+=*b;
+			*b=tmp-*b;
+        }
+     }
+   }
+ }
 void fast_parallel_walsh(int* vector, int size)
 {	
 	const register int log2 = l2(size) - 1;
@@ -40,8 +66,15 @@ void fast_parallel_walsh(int* vector, int size)
 	const register int max_j=1<<log2;
 	register int* const reg_vector=vector;
 	const register int num_thread_log=l2(omp_get_max_threads())-1;
-	for (register int i = 0; i < log2; ++i)
+	for (register int i = log2-1; i >=0; --i)
 	{
+		if (log2-i-1==num_thread_log){
+			#pragma omp parallel for schedule (static,1)
+			for (int j=0;j<1<<num_thread_log;j++){
+				FWHT (reg_vector+j*(size>>(num_thread_log)),(size>>(num_thread_log)));
+			}
+			return;
+		}
 		const register int max_k=1<<i;
 		if(i <= switch_loop_parallel) {
 		register int chunk=max_j>>(num_thread_log+i+1);
