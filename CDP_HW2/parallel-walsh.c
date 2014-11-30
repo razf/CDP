@@ -12,7 +12,7 @@
 	 (1-2*Macro_tmp);})
 
 // just a integer log2
-int l2 (int x)
+int l2 (register int x)
 {
         register int l2;
         for (l2 = 0; x > 0; x >>=1)
@@ -25,9 +25,9 @@ int l2 (int x)
 // need to define max_k before use
 #define inside_Loop for (register int k = 0; k < max_k; ++k)\
 			   {\
-				register int* a = reg_vector + j + k;\
-				register int* b = reg_vector + j + k + max_k;\
-				register int Macro_tmp = *a;\
+				register int* const a = reg_vector + j + k;\
+				register int* const b = a + max_k;\
+				const register int Macro_tmp = *a;\
 				*a += *b;\
 				*b = Macro_tmp - *b;\
 			   }
@@ -39,13 +39,13 @@ void fast_parallel_walsh(int* vector, int size)
 	const register int switch_loop_parallel=log2>>1;
 	const register int max_j=1<<log2;
 	register int* const reg_vector=vector;
-	const register int num_thread_log=l2(omp_get_max_threads());
+	const register int num_thread_log=l2(omp_get_max_threads())-1;
 	for (register int i = 0; i < log2; ++i)
 	{
 		const register int max_k=1<<i;
-		if(i < switch_loop_parallel) {
+		if(i <= switch_loop_parallel) {
 		register int chunk=max_j>>(num_thread_log+i+1);
-		chunk= (chunk>512 ? chunk : 512); // chunks lower then 512 are too small
+		chunk= (chunk>256 ? chunk : 256); // chunks lower then 512 are too small
 		// max_j>>(num_thread_log+i+1) 32768>>FIVE(i)
 		#pragma omp parallel for schedule(static,chunk)
 			for (register int j = 0; j < max_j; j += 1 << (i+1)) // putting the jump size in register and using it here make a slowdown
@@ -57,7 +57,7 @@ void fast_parallel_walsh(int* vector, int size)
 		else {
 			register int j=0;
 			register int chunk=max_k>>(num_thread_log);
-			chunk= (chunk>512 ? chunk : 512);// chunks lower then 512 are too small
+			chunk= (chunk>256 ? chunk : 256);// chunks lower then 512 are too small
 			// before some of the optimization the paragma parallel here insted of parallel inside the loop 
 			//made measurable improvement now it does not make a measurable speedup/slowdown 
 			#pragma omp parallel // if we create the threads here and not in the pragma for we reduce overhead of creating threads each iteration
