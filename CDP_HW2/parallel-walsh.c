@@ -46,7 +46,7 @@ void FWHT (register int* const vector,const register int size)
    for (i = 0; i < log2; ++i)
    {
 	max_k=(1<<i);
-     for (j = 0; j < max_j; j += 1 << (i+1))
+     for (j = 0; j < max_j; j += max_k << 1)
      {
         for (k = 0; k < max_k; ++k)
         {
@@ -59,6 +59,7 @@ void FWHT (register int* const vector,const register int size)
      }
    }
  }
+ #define CEILING(X) ((X-(int)(X)) > 0 ? (int)(X+1) : (int)(X))
 void fast_parallel_walsh(int* vector, int size)
 {	
 	const register int log2 = l2(size) - 1;
@@ -66,17 +67,18 @@ void fast_parallel_walsh(int* vector, int size)
 	const register int max_j=1<<log2;
 	register int* const reg_vector=vector;
 	const register int num_thread_log=l2(omp_get_max_threads())-1;
+	const register int start_searial = log2-19>num_thread_log? log2-19 : num_thread_log ;
 	for (register int i = log2-1; i >=0; --i)
 	{
-		if (log2-i-1==num_thread_log){
-			#pragma omp parallel for schedule (static,1)
-			for (int j=0;j<1<<num_thread_log;j++){
-				FWHT (reg_vector+j*(size>>(num_thread_log)),(size>>(num_thread_log)));
+		if (log2-i-1==start_searial){
+			#pragma omp parallel for schedule (static,(start_searial-num_thread_log) <= 0? 1<<(start_searial-num_thread_log):1)
+			for (int j=0;j<1<<start_searial;j++){
+				FWHT (reg_vector+j*(size>>start_searial),(size>>start_searial));
 			}
 			return;
 		}
 		const register int max_k=1<<i;
-		if(i <= switch_loop_parallel) {
+		if(i <= switch_loop_parallel) {	
 		register int chunk=max_j>>(num_thread_log+i+1);
 		chunk= (chunk>256 ? chunk : 256); // chunks lower then 512 are too small
 		// max_j>>(num_thread_log+i+1) 32768>>FIVE(i)
@@ -93,8 +95,8 @@ void fast_parallel_walsh(int* vector, int size)
 			chunk= (chunk>256 ? chunk : 256);// chunks lower then 512 are too small
 			// before some of the optimization the paragma parallel here insted of parallel inside the loop 
 			//made measurable improvement now it does not make a measurable speedup/slowdown 
-			#pragma omp parallel // if we create the threads here and not in the pragma for we reduce overhead of creating threads each iteration
-			{
+			#pragma omp parallel  // if we create the threads here and not in the pragma for we reduce overhead of creating threads each iteration
+			{				
 				for (; j < max_j;)
 				{
 					
@@ -104,7 +106,7 @@ void fast_parallel_walsh(int* vector, int size)
 					#pragma omp barrier // it worked without barrier but i think without barrier there could be errors because the inside_Loop use j
 					#pragma omp single 
 					{
-						 j += 1 << (i+1);
+						 j += max_k<< 1;
 					}
 				}
 			}
