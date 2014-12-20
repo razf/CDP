@@ -16,7 +16,8 @@ int tsp_main(int citiesNum, int xCoord[], int yCoord[], int shortestPath[]);
 int main(int argc, char** argv)  
 {
 	// example input, with 18 cities. set citiesNum to less for an easier start.
-	int citiesNum = 18;
+	// int citiesNum = 18;
+	int citiesNum = 4;
 	int xCoord[] = {1, 3, 5, 9, 2,  3,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1};   
 	int yCoord[] = {1, 3, 5, 7, 9, 11, 13, 15, 17, 20, 22, 24, 26, 27, 29, 30, 31, 32};   
 	int* shortestPath = malloc(citiesNum * sizeof(int));  
