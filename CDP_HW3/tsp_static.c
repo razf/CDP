@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
 #define ABS(x) (x>0?x:-x)
 #define MIN(a,b) (a<b?a:b)
@@ -10,10 +11,10 @@
 typedef struct
 {
 	int citiesNum;
-	int xCoord;
-	int yCoord;
+	int xCoord[];
+	int yCoord [];
 	int jobs;
-	int jobs_array;
+	int jobs_array [];
 } dataToProcesses;
 
 void build_derived_static_type(INDATA_TYPE* indata, MPI_Datatype* message_type_ptr, int first_array_len, int second_array_len){
@@ -23,7 +24,7 @@ void build_derived_static_type(INDATA_TYPE* indata, MPI_Datatype* message_type_p
 	MPI_Aint addresses[6];
 	MPI_Datatype typelist[5];
 	// First specify the types
-	// typelist[0] = x,y arrays length, typelist[1] = xCoord, typelist[2] = yCoord, typelist[3] = job num, typelist[4] = jobs array 
+	// typelist[0] = x,y arrays length, typelist[1] = xCoord, typelist[2] = yCoord, typelist[3] = jobs num, typelist[4] = jobs array 
 	typelist[0] = typelist[1]= typelist[2] = typelist[3] = typelist[4] = MPI_INT;
 	// Specify the number of elements of each type
 	block_lengths[1] = block_lengths[2] = first_array_len;
@@ -72,11 +73,67 @@ int bnb_serial(int shortestPath[], int** edgeGarph, char** auxMatrix , int bestB
 // The static parellel algorithm main function.
 
 int tsp_static(int citiesNum, int xCoord[], int yCoord[], int shortestPath[]) {
-	//build jobs
+	//------------------------------------------------ BUILD JOBS ------------------------------------------------
 	int numtasks;
 	MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
-	int max_job=(citiesNum-2)*(citiesNum-1);
-
+	int job_num=(citiesNum-2)*(citiesNum-1);
+	int tasks_size [numtasks];
+	{
+		int tmp_job_num=job_num, tmp_numtasks=numtasks;
+		for (int i=0; i<numtasks ; ++i){
+			tasks_size[i]=(tmp_job_num + tmp_numtasks - 1) / tmp_numtasks; // cielling
+			tmp_job_num -= tasks_size[i];
+			tmp_numtasks--;
+		}
+	}
+	int path_prefix=citiesNum+1; // current path_prefix, x=path_prefix/citiesNum => edge (0,x) path_prefix%citiesNum=y => edge (x,y)
+	int * tasks [numtasks];
+	for (int i=0; i<numtasks; ++i){
+		// allocating an array  for a set of paths prefixes  we take the maximum size possible;
+		tasks[i] = malloc (sizeof(int)*(job_num + numtasks - 1) / numtasks;);
+		if (! tasks[i]){
+			printf("error allocating paths prefixes \n");
+			fflush(stdout);
+			exit(0);
+		}
+		// calculating the set of paths prefixes 
+		int j=0;
+		while (j<tasks_size[i]){
+			// not sure if assert work with the current makefile
+			assert ( path_prefix <= citiesNum*citiesNum); // path_prefix gone too high
+			assert ( jobs_num >= 0);// already assigned all paths prefixes  needed
+			if ( path_prefix%citiesNum != 0 && path_prefix%citiesNum != path_prefix/citiesNum){ // check if current path_prefix isn't cycle
+				tasks_size[i][j]=path_prefix;
+				j++;
+				jobs_num--;
+			}
+			path_prefix++;			
+		}
+	}
+	// ---------------------------------- SENDING THE DATA CALCULATED -----------------------------------
+	int buffer_size=0;
+	MPI_Comm comm = ???;
+	MPI_Datatype job;
+	build_derived_static_type(dataToProcesses, &job ,citiesNum, tasks_size[0]+1); // maximum paths prefixes to handle is tasks_size[0]+1
+	MPI_Pack_size(numtasks,job,comm,&buffer_size);
+	buffer_size += numtasks*MPI_BSEND_OVERHEAD;
+	dataToProcesses jobs [numtasks];
+	for (int i=0; i < numtasks; ++i){
+		jobs[i].xCoord=xCoord;
+		jobs[i].citiesNum=citiesNum;
+		jobs[i].yCoord=yCoord;
+		jobs[i].jobs=tasks_size[i];
+		jobs[i].jobs_array=tasks[i];
+	}
+	MPI_Buffer_attach( jobs, buffer_size );
+	for (int i=0; i < numtasks; ++i){
+		 MPI_Bsend( jobs, 1, job, comm , ??dest??,??tag?? ,comm);
+	}
+	// free the allocated paths prefixes 
+	for (int i=0; i<numtasks; i++)
+		free (tasks[i]);
+	// ----------------------------------- RECIEVING ANSWERS -------------------------------------------------
+	
 }
 int tsp_main(int citiesNum, int xCoord[], int yCoord[], int shortestPath[])
 {
